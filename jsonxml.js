@@ -7,6 +7,7 @@
 /** @constant {string} */
 const DEFAULT_XML_HEADER = '<?xml version="1.0" encoding="UTF-8" standalone="no" ?>'
 const valid_start_tag = new RegExp(/^(:|[A-Z]|_|[a-z]|[\xC0-\xD6]|[\xD8-\xF6]|[\xF8-\u02FF]|[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]|[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]|[\uF900-\uFDCF]|[\uFDF0-\uFFFD])(:|[A-Z]|_|[a-z]|[\xC0-\xD6]|[\xD8-\xF6]|[\xF8-\u02FF]|[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]|[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]|[\uF900-\uFDCF]|[\uFDF0-\uFFFD]|-|\\.|[0-9]|\xB7|[\u0300-\u036F]|[\u203F-\u2040])*$/);
+let attempt_bad_name_fix = false;
 
 /**
  * Processes options before actually parsing the JSON object
@@ -40,6 +41,9 @@ function jsonxml(obj, options = {}) {
         if (options.header) options.header += '\n'
         _format = _formatter(options.indent)
     }
+
+	if (options.attempt_bad_name_fix)
+		attempt_bad_name_fix = true;
 
     return options.header + _parse(obj, options.root, depth)
 }
@@ -98,7 +102,7 @@ _format = (out, wrap, type, depth) => {
 		
 		if (!(valid_start_tag.test(tag_name)))
 		{
-			if (options.attempt_bad_name_fix)
+			if (attempt_bad_name_fix)
 			{
 				var temp_tag = "_" + tag_name;
 			
@@ -148,7 +152,7 @@ _formatter = (indent) => (out, wrap, type, depth) => {
 
 	if (!(valid_start_tag.test(wrap)))
 	{
-		if (options.attempt_bad_name_fix)
+		if (attempt_bad_name_fix)
 		{
 			var temp_tag = "_" + tag_name;
 			
