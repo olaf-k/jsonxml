@@ -1,11 +1,12 @@
 /**
  * @fileoverview A simple JSON to XML converter
- * @version 1.0.0
+ * @version 1.0.1
  * @author Github: olaf-k | Twitter: @olaf_k
  */
 
 /** @constant {string} */
 const DEFAULT_XML_HEADER = '<?xml version="1.0" encoding="UTF-8" standalone="no" ?>'
+const valid_start_tag = new RegExp(/^(:|[A-Z]|_|[a-z]|[\xC0-\xD6]|[\xD8-\xF6]|[\xF8-\u02FF]|[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]|[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]|[\uF900-\uFDCF]|[\uFDF0-\uFFFD])(:|[A-Z]|_|[a-z]|[\xC0-\xD6]|[\xD8-\xF6]|[\xF8-\u02FF]|[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]|[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]|[\uF900-\uFDCF]|[\uFDF0-\uFFFD]|-|\\.|[0-9]|\xB7|[\u0300-\u036F]|[\u203F-\u2040])*$/);
 
 /**
  * Processes options before actually parsing the JSON object
@@ -15,6 +16,7 @@ const DEFAULT_XML_HEADER = '<?xml version="1.0" encoding="UTF-8" standalone="no"
  * @param {boolean|string} [options.header] - A truthy value will prepend to default xml header the output, a string value will prepend said string instead
  * @param {string} [options.root] - A tag name that will be used to wrap the output with
  * @param {boolean|string} [options.indent] - A truthy value will generate a prettyprinted output indented with tab, a string value will generate a prettyprinted output indented with this string
+ * @param {boolean} [options.attempt_bad_name_fix] - A boolean value to attempt to handle object keys which aren't valid XML tag names
  * @returns {string} The resulting XML string
  */
 function jsonxml(obj, options = {}) {
@@ -89,7 +91,40 @@ function _parse(obj, wrap = false, depth = 0) {
  * @param {number} depth - Not used, present for consistency with _formatter's return function
  * @returns {string} An XML formatted string
  */
-_format = (out, wrap, type, depth) => wrap ? `<${wrap}>${out}</${wrap}>` : out
+_format = (out, wrap, type, depth) => {
+	if (wrap)
+	{
+		var tag_name = wrap;
+		
+		if (!(valid_start_tag.test(tag_name)))
+		{
+			if (options.attempt_bad_name_fix)
+			{
+				var temp_tag = "_" + tag_name;
+			
+				if (valid_start_tag.test(temp_tag))
+				{
+					tag_name = temp_tag;
+				}
+				else
+				{
+					throw(`Unable to use '${wrap}' as an XML tag`);
+				}
+			}
+			else
+			{
+				throw(`Unable to use '${wrap}' as an XML tag`);
+			}
+		}
+		
+		return `<${tag_name}>${out}</${tag_name}>`;
+		}
+	}
+	else
+	{
+		return out;
+	}
+}
 
 /**
  * Returns a formatter function that indents the output
@@ -110,11 +145,35 @@ _format = (out, wrap, type, depth) => wrap ? `<${wrap}>${out}</${wrap}>` : out
 _formatter = (indent) => (out, wrap, type, depth) => {
     if (!wrap) return out
 
+	var tag_name = wrap;
+
+	if (!(valid_start_tag.test(wrap)))
+	{
+		if (options.attempt_bad_name_fix)
+		{
+			var temp_tag = "_" + tag_name;
+			
+			if (valid_start_tag.test(temp_tag))
+			{
+				tag_name = temp_tag;
+			}
+			else
+			{
+				throw(`Unable to use '${wrap}' as an XML tag`);
+			}
+		}
+		else
+		{
+			throw(`Unable to use '${wrap}' as an XML tag`);
+		}
+	}
+
     let tab = indent.repeat(depth-1)
+	
     if (type === 'object')
-        return `${tab}<${wrap}>\n${out}${tab}</${wrap}>\n`
+        return `${tab}<${tag_name}>\n${out}${tab}</${tag_name}>\n`
     else
-        return `${tab}<${wrap}>${out}</${wrap}>\n`
+        return `${tab}<${tag_name}>${out}</${tag_name}>\n`
 }
 
 /**
