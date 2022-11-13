@@ -118,7 +118,6 @@ _format = (out, wrap, type, depth) => {
 		}
 		
 		return `<${tag_name}>${out}</${tag_name}>`;
-		}
 	}
 	else
 	{
